@@ -1,1 +1,922 @@
-# Radio-fm
+>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- منع المحتويات الخارجية فقط -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src *; frame-src 'none';">
+    <meta name="referrer" content="no-referrer">
+    
+    <title>راديو إف إم - مشغل راديو وموسيقى</title>
+    
+    <!-- تنسيقات CSS -->
+    <style>
+        /* إعادة تعيين التنسيقات الأساسية */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        /* إخفاء الإشعارات الخارجية فقط - وليس محتوى الصفحة */
+        iframe, .popup, .notification, .banner, .alert, .ad, .github-corner, 
+        [class*="github"], [id*="github"], [class*="notification"], 
+        [id*="notification"], [class*="banner"], [id*="banner"],
+        [class*="ad"], [id*="ad"], .modal, .overlay {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+            z-index: -9999 !important;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            color: #fff;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        /* شاشة التحميل */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-size: 20px;
+            color: #8B0000;
+        }
+
+        /* ============ شريط العنوان - محفوظ ============ */
+        .header {
+            background-color: #111;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-bottom: 1px solid #222;
+            z-index: 100;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .site-name {
+            color: #8B0000;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logo {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(45deg, #8B0000, #000);
+            border-radius: 50%;
+            border: 2px solid #8B0000;
+        }
+
+        /* المحتوى الرئيسي */
+        .main-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding-top: 50px;
+        }
+
+        /* قسم الصورة والمؤثرات */
+        .visual-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        .artist-image {
+            width: 100%;
+            max-width: 400px;
+            height: 150px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid #8B0000;
+            box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+            margin-bottom: 15px;
+        }
+
+        .artist-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* المؤثرات البصرية */
+        .visualizer {
+            width: 100%;
+            max-width: 400px;
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            background: rgba(20, 20, 20, 0.8);
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+
+        .bar {
+            width: 6px;
+            background-color: #8B0000;
+            border-radius: 3px 3px 0 0;
+            transition: height 0.1s ease;
+            min-height: 5px;
+            flex: 1;
+        }
+
+        /* معلومات الفنان */
+        .artist-info {
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #333;
+        }
+
+        .artist-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .station-name {
+            font-size: 14px;
+            color: #8B0000;
+            margin-bottom: 5px;
+        }
+
+        .player-status {
+            font-size: 12px;
+            color: #0af;
+            font-weight: bold;
+        }
+
+        /* لوحة التحكم */
+        .controls-section {
+            background-color: #111;
+            padding: 10px;
+            border-top: 1px solid #222;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background-color: #333;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #8B0000;
+            border-radius: 3px;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-btn {
+            font-size: 22px;
+            background-color: #8B0000;
+            width: 50px;
+            height: 50px;
+        }
+
+        /* قسم المحطات */
+        .stations-section {
+            background-color: #0a0a0a;
+            padding: 10px 0;
+            border-top: 1px solid #222;
+            height: 140px;
+        }
+
+        .stations-title {
+            font-size: 14px;
+            color: #8B0000;
+            margin: 0 10px 8px;
+            font-weight: bold;
+        }
+
+        .stations-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 0 10px;
+            height: calc(100% - 25px);
+        }
+
+        .stations-list {
+            display: inline-flex;
+            gap: 10px;
+            height: 100%;
+            align-items: center;
+        }
+
+        .station-card {
+            display: inline-block;
+            width: 100px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #333;
+        }
+
+        .station-card.active {
+            border-color: #8B0000;
+            background-color: #2a1a1a;
+        }
+
+        .station-image {
+            width: 100%;
+            height: 60px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .station-info {
+            padding: 6px;
+        }
+
+        .station-name-card {
+            font-size: 12px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* للمحطات الفارغة */
+        .station-card.empty .station-image {
+            background-color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 20px;
+        }
+
+        /* رسالة الخطأ */
+        .audio-unsupported {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 1000;
+            border: 1px solid #8B0000;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <!-- شاشة التحميل -->
+    <div id="loadingScreen">جاري تحميل المشغل...</div>
+
+    <!-- ============ شريط العنوان - موجود كما هو ============ -->
+    <div class="header">
+        <div class="logo"></div>
+        <div class="site-name">راديو إف إم</div>
+    </div>
+
+    <div class="main-container">
+        <!-- قسم الصورة والمؤثرات -->
+        <div class="visual-section">
+            <div class="artist-image">
+                <img id="artistImg" src="" alt="صورة المحطة">
+            </div>
+            
+            <div class="visualizer" id="visualizer">
+                <!-- ستضاف الأشرطة بالجافاسكريبت -->
+            </div>
+            
+            <div class="artist-info">
+                <div class="artist-name" id="currentArtist">اختر محطة للاستماع</div>
+                <div class="station-name" id="currentStation">راديو إف إم</div>
+                <div class="player-status" id="playerStatus">⏸️ متوقف</div>
+            </div>
+        </div>
+
+        <!-- لوحة التحكم -->
+        <div class="controls-section">
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="control-buttons">
+                <button class="control-btn prev-btn" title="تشغيل المحطة السابقة">⏮️</button>
+                <button class="control-btn play-btn" id="playBtn" title="تشغيل/إيقاف">▶️</button>
+                <button class="control-btn next-btn" title="تشغيل المحطة التالية">⏭️</button>
+                <button class="control-btn volume-btn" title="كتم/إلغاء كتم">🔊</button>
+            </div>
+        </div>
+
+        <!-- قسم المحطات -->
+        <div class="stations-section">
+            <div class="stations-title">المحطات المتاحة</div>
+            <div class="stations-container">
+                <div class="stations-list" id="stationsList">
+                    <!-- ستضاف المحطات بالجافاسكريبت -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- رسالة الخطأ -->
+    <div class="audio-unsupported" id="audioUnsupported">
+        عذراً، حدث خطأ في تشغيل الصوت. حاول تحديث الصفحة.
+    </div>
+
+    <!-- مشغل الصوت -->
+    <audio id="audioPlayer" preload="metadata"></audio>
+
+    <!-- كود JavaScript -->
+    <script>
+        // البيانات الأساسية
+        const stations = [
+            {
+                id: 1,
+                name: "راديو طرب",
+                artist: "أجمل الأغاني العربية",
+                genre: "موسيقى عربية",
+                image: "https://img.pikbest.com/wp/202405/retro-radio-3d-rendered-vintage-microphone-and-against-a-black-backdrop_9845197.jpg!w700wp",
+                streamUrl: "https://stream.zeno.fm/fy8achbq97zuv" 
+            },
+            {
+                id: 2,
+                name: "LB راديو طرب",
+                artist: "ليبانيز راديو",
+                genre: "موسيقى لبنانية",
+                image: "https://png.pngtree.com/thumb_back/fh260/background/20230929/pngtree-vibrant-on-air-red-sign-illuminates-live-streaming-studio-or-radio-image_13523309.png",
+                streamUrl: "https://stream.zeno.fm/qngq01c4mfhvv" 
+            },
+            {
+                id: 3,
+                name: "راديو اليسا",
+                artist: "أغاني اليسا",
+                genre: "موسيقى عربية",
+                image: "https://m.gomhuriaonline.com/Upload/News/3-3-2019_07_32_55_GomhuriaOnline_1551591175.jpg",
+                streamUrl: "https://stream.zeno.fm/v7n499m8ckhvv" 
+            },
+            {
+                id: 4,
+                name: "راديو فيروز FM",
+                artist: "فيروز - سيدة الغناء العربي",
+                genre: "موسيقى عربية كلاسيكية",
+                image: "https://www.aljazeera.net/wp-content/uploads/2018/11/bd65b554-e8d0-4198-98ff-e65b21e991f8.jpeg",
+                streamUrl: "https://stream.zeno.fm/c0akqv6cz4zuv"
+            }
+        ];
+
+        // إضافة محطات فارغة
+        for (let i = 5; i <= 24; i++) {
+            stations.push({
+                id: i,
+                name: `محطة ${i}`,
+                artist: `فنان ${i}`,
+                genre: "سيتم الإضافة لاحقاً",
+                image: "",
+                streamUrl: "",
+                isEmpty: true
+            });
+        }
+
+        // العناصر الأساسية
+        const elements = {
+            loadingScreen: document.getElementById('loadingScreen'),
+            audioPlayer: document.getElementById('audioPlayer'),
+            playBtn: document.getElementById('playBtn'),
+            progressBar: document.getElementById('progressBar'),
+            progressContainer: document.getElementById('progressContainer'),
+            artistImg: document.getElementById('artistImg'),
+            currentArtist: document.getElementById('currentArtist'),
+            currentStation: document.getElementById('currentStation'),
+            playerStatus: document.getElementById('playerStatus'),
+            stationsList: document.getElementById('stationsList'),
+            visualizer: document.getElementById('visualizer'),
+            audioUnsupported: document.getElementById('audioUnsupported')
+        };
+
+        // حالة التطبيق
+        let state = {
+            isPlaying: false,
+            currentStationIndex: 0,
+            isMuted: false,
+            visualizerBars: []
+        };
+
+        // ==================== إزالة الإشعارات الخارجية فقط ====================
+        function removeExternalNotifications() {
+            console.log('إزالة الإشعارات الخارجية فقط...');
+            
+            // 1. إزالة العناصر الخارجية فقط (ليس محتوى الصفحة)
+            const externalElements = [
+                'iframe', '.popup', '.notification', '.banner', '.alert', 
+                '.ad', '.github-corner', '.modal', '.overlay',
+                '[class*="github"]', '[id*="github"]',
+                '[class*="notification"]', '[id*="notification"]',
+                '[class*="banner"]', '[id*="banner"]',
+                '[class*="ad"]', '[id*="ad"]'
+            ];
+            
+            externalElements.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    if (el && el.parentNode) {
+                        // تأكد أن هذا ليس جزءاً من صفحتنا
+                        if (!el.closest('.header') && 
+                            !el.closest('.main-container') && 
+                            !el.closest('#loadingScreen') && 
+                            !el.closest('.audio-unsupported')) {
+                            
+                            el.style.display = 'none';
+                            el.style.visibility = 'hidden';
+                            el.style.opacity = '0';
+                            el.style.height = '0';
+                            el.style.width = '0';
+                            el.style.position = 'absolute';
+                            el.style.zIndex = '-9999';
+                            
+                            // إزالة العنصر نهائياً بعد فترة
+                            setTimeout(() => {
+                                if (el.parentNode) {
+                                    el.parentNode.removeChild(el);
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+            });
+            
+            // 2. منع النوافذ المنبثقة فقط (لا تؤثر على صفحتنا)
+            const originalAlert = window.alert;
+            const originalConfirm = window.confirm;
+            const originalPrompt = window.prompt;
+            
+            window.alert = function(message) {
+                // اسمح فقط بالرسائل الخاصة بنا
+                if (typeof message === 'string' && 
+                   (message.includes('راديو') || 
+                    message.includes('محطة') || 
+                    message.includes('فارغة'))) {
+                    return originalAlert.call(window, message);
+                }
+                return true;
+            };
+            
+            window.confirm = function(message) {
+                // اسمح فقط بالرسائل الخاصة بنا
+                if (typeof message === 'string' && 
+                   (message.includes('راديو') || 
+                    message.includes('محطة'))) {
+                    return originalConfirm.call(window, message);
+                }
+                return true;
+            };
+            
+            window.prompt = function(message, defaultValue) {
+                // اسمح فقط بالرسائل الخاصة بنا
+                if (typeof message === 'string' && 
+                   (message.includes('راديو') || 
+                    message.includes('محطة'))) {
+                    return originalPrompt.call(window, message, defaultValue);
+                }
+                return '';
+            };
+            
+            // 3. مراقبة وإزالة العناصر المضافة ديناميكياً (فقط الخارجية)
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1) { // عنصر HTML
+                            // تحقق إذا كان العنصر خارجياً
+                            const isExternal = 
+                                node.tagName === 'IFRAME' || 
+                                (node.tagName === 'DIV' && (
+                                    node.className.includes('popup') ||
+                                    node.className.includes('notification') ||
+                                    node.className.includes('banner') ||
+                                    node.className.includes('alert') ||
+                                    node.className.includes('github') ||
+                                    node.className.includes('ad')
+                                ));
+                            
+                            if (isExternal) {
+                                // تأكد أنه ليس جزءاً من صفحتنا
+                                if (!node.closest('.header') && 
+                                    !node.closest('.main-container') && 
+                                    !node.closest('#loadingScreen') && 
+                                    !node.closest('.audio-unsupported')) {
+                                    node.remove();
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('تم إزالة الإشعارات الخارجية فقط');
+        }
+
+        // ==================== تهيئة التطبيق ====================
+        function init() {
+            console.log('بدء تهيئة التطبيق...');
+            
+            // إزالة الإشعارات الخارجية فقط (وليس محتوى الصفحة)
+            removeExternalNotifications();
+            
+            // إخفاء شاشة التحميل بعد تأخير قصير
+            setTimeout(() => {
+                elements.loadingScreen.style.display = 'none';
+                initApp();
+            }, 1000);
+        }
+
+        // تهيئة التطبيق الرئيسية
+        function initApp() {
+            console.log('تهيئة التطبيق الرئيسية...');
+            
+            // إنشاء المؤثرات البصرية
+            createVisualizer();
+            
+            // تحميل المحطات
+            loadStations();
+            
+            // إعداد الأحداث
+            setupEventListeners();
+            
+            // تحديد المحطة الأولى
+            selectStation(0);
+            
+            // ضبط الصورة الافتراضية
+            elements.artistImg.src = stations[0].image;
+            elements.artistImg.onerror = function() {
+                this.src = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80';
+            };
+            
+            console.log('تم تهيئة التطبيق بنجاح');
+        }
+
+        // إنشاء المؤثرات البصرية
+        function createVisualizer() {
+            elements.visualizer.innerHTML = '';
+            state.visualizerBars = [];
+            
+            // إنشاء 20 شريطاً
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = '5px';
+                elements.visualizer.appendChild(bar);
+                state.visualizerBars.push(bar);
+            }
+            
+            // بدء المؤثرات الوهمية
+            startMockVisualizer();
+        }
+
+        // تحميل المحطات
+        function loadStations() {
+            elements.stationsList.innerHTML = '';
+            
+            stations.forEach((station, index) => {
+                const card = document.createElement('div');
+                card.className = 'station-card' + (station.isEmpty ? ' empty' : '');
+                card.dataset.index = index;
+                
+                const imageDiv = document.createElement('div');
+                imageDiv.className = 'station-image';
+                
+                if (station.image && !station.isEmpty) {
+                    imageDiv.style.backgroundImage = `url('${station.image}')`;
+                } else if (station.isEmpty) {
+                    imageDiv.innerHTML = '<span>+</span>';
+                }
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'station-info';
+                infoDiv.innerHTML = `
+                    <div class="station-name-card">${station.name}</div>
+                `;
+                
+                card.appendChild(imageDiv);
+                card.appendChild(infoDiv);
+                
+                if (!station.isEmpty) {
+                    // تشغيل المحطة مباشرة عند النقر عليها
+                    card.addEventListener('click', () => {
+                        selectStation(index);
+                        playStation();
+                    });
+                }
+                
+                elements.stationsList.appendChild(card);
+            });
+        }
+
+        // إعداد مستمعي الأحداث
+        function setupEventListeners() {
+            // زر التشغيل/الإيقاف
+            elements.playBtn.addEventListener('click', togglePlay);
+            
+            // زر السابق - يشغل المحطة السابقة مباشرة
+            document.querySelector('.prev-btn').addEventListener('click', function() {
+                prevStation();
+                // تشغيل المحطة تلقائياً بعد التبديل
+                setTimeout(playStation, 300);
+            });
+            
+            // زر التالي - يشغل المحطة التالية مباشرة
+            document.querySelector('.next-btn').addEventListener('click', function() {
+                nextStation();
+                // تشغيل المحطة تلقائياً بعد التبديل
+                setTimeout(playStation, 300);
+            });
+            
+            // زر كتم الصوت
+            document.querySelector('.volume-btn').addEventListener('click', toggleMute);
+            
+            // شريط التقدم
+            elements.progressContainer.addEventListener('click', (e) => {
+                if (!elements.audioPlayer.duration) return;
+                
+                const rect = elements.progressContainer.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                elements.audioPlayer.currentTime = percent * elements.audioPlayer.duration;
+            });
+            
+            // أحداث مشغل الصوت
+            elements.audioPlayer.addEventListener('timeupdate', updateProgress);
+            elements.audioPlayer.addEventListener('ended', nextStation);
+            
+            elements.audioPlayer.addEventListener('play', () => {
+                state.isPlaying = true;
+                elements.playBtn.textContent = '⏸️';
+                elements.playBtn.title = 'إيقاف';
+                elements.playerStatus.textContent = '▶️ مشغل';
+                elements.playerStatus.style.color = '#0af';
+            });
+            
+            elements.audioPlayer.addEventListener('pause', () => {
+                state.isPlaying = false;
+                elements.playBtn.textContent = '▶️';
+                elements.playBtn.title = 'تشغيل';
+                elements.playerStatus.textContent = '⏸️ متوقف';
+                elements.playerStatus.style.color = '#f0a';
+            });
+            
+            elements.audioPlayer.addEventListener('error', handleAudioError);
+        }
+
+        // اختيار محطة
+        function selectStation(index) {
+            if (stations[index].isEmpty) {
+                alert('هذه محطة فارغة، يمكنك إضافتها لاحقاً في الكود');
+                return;
+            }
+            
+            // إيقاف التشغيل الحالي
+            elements.audioPlayer.pause();
+            state.isPlaying = false;
+            
+            // تحديث الفهرس
+            state.currentStationIndex = index;
+            
+            // تحديث الواجهة
+            document.querySelectorAll('.station-card').forEach((card, i) => {
+                if (i === index) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+            
+            // تحديث المعلومات
+            const station = stations[index];
+            elements.currentArtist.textContent = station.artist;
+            elements.currentStation.textContent = station.name;
+            
+            // تحديث الصورة
+            if (station.image) {
+                elements.artistImg.src = station.image;
+            }
+            
+            // تعيين رابط الصوت
+            elements.audioPlayer.src = station.streamUrl;
+            elements.progressBar.style.width = '0%';
+            
+            // تحديث الحالة
+            elements.playerStatus.textContent = '⏳ جاري التحميل...';
+            elements.playerStatus.style.color = '#ffa500';
+            
+            console.log(`تم اختيار المحطة: ${station.name}`);
+        }
+
+        // تشغيل المحطة
+        function playStation() {
+            if (!elements.audioPlayer.src) {
+                console.error('لا يوجد رابط تشغيل');
+                return;
+            }
+            
+            elements.audioPlayer.play().then(() => {
+                console.log('تم تشغيل الصوت بنجاح');
+                elements.audioUnsupported.style.display = 'none';
+            }).catch(e => {
+                console.error('فشل تشغيل الصوت:', e);
+                handleAudioError();
+            });
+        }
+
+        // تبديل التشغيل/الإيقاف
+        function togglePlay() {
+            if (!elements.audioPlayer.src) {
+                selectStation(0);
+                setTimeout(playStation, 500);
+                return;
+            }
+            
+            if (state.isPlaying) {
+                elements.audioPlayer.pause();
+            } else {
+                playStation();
+            }
+        }
+
+        // المحطة السابقة - تشغيل تلقائي بعد التبديل
+        function prevStation() {
+            let newIndex = state.currentStationIndex - 1;
+            if (newIndex < 0) newIndex = stations.length - 1;
+            
+            while (stations[newIndex].isEmpty && newIndex !== state.currentStationIndex) {
+                newIndex--;
+                if (newIndex < 0) newIndex = stations.length - 1;
+            }
+            
+            selectStation(newIndex);
+            // سيتم التشغيل تلقائياً من مستمع الحدث
+        }
+
+        // المحطة التالية - تشغيل تلقائي بعد التبديل
+        function nextStation() {
+            let newIndex = state.currentStationIndex + 1;
+            if (newIndex >= stations.length) newIndex = 0;
+            
+            while (stations[newIndex].isEmpty && newIndex !== state.currentStationIndex) {
+                newIndex++;
+                if (newIndex >= stations.length) newIndex = 0;
+            }
+            
+            selectStation(newIndex);
+            // سيتم التشغيل تلقائياً من مستمع الحدث
+        }
+
+        // كتم/إلغاء كتم الصوت
+        function toggleMute() {
+            state.isMuted = !state.isMuted;
+            elements.audioPlayer.muted = state.isMuted;
+            
+            const volumeBtn = document.querySelector('.volume-btn');
+            if (state.isMuted) {
+                volumeBtn.textContent = '🔇';
+                volumeBtn.title = 'إلغاء الكتم';
+            } else {
+                volumeBtn.textContent = '🔊';
+                volumeBtn.title = 'كتم';
+            }
+        }
+
+        // تحديث شريط التقدم
+        function updateProgress() {
+            if (elements.audioPlayer.duration && !isNaN(elements.audioPlayer.duration)) {
+                const progress = (elements.audioPlayer.currentTime / elements.audioPlayer.duration) * 100;
+                elements.progressBar.style.width = `${progress}%`;
+            }
+        }
+
+        // معالجة أخطاء الصوت
+        function handleAudioError() {
+            console.error('حدث خطأ في الصوت');
+            elements.audioUnsupported.style.display = 'block';
+            
+            setTimeout(() => {
+                elements.audioUnsupported.style.display = 'none';
+            }, 3000);
+        }
+
+        // مؤثرات وهمية
+        function startMockVisualizer() {
+            let frame = 0;
+            
+            function animate() {
+                if (!state.isPlaying) {
+                    // عندما يكون متوقفاً، اجعل الأشرطة قصيرة
+                    state.visualizerBars.forEach((bar, i) => {
+                        bar.style.height = '5px';
+                        bar.style.backgroundColor = '#8B0000';
+                    });
+                } else {
+                    // عندما يكون مشغلاً، حرك الأشرطة
+                    frame++;
+                    state.visualizerBars.forEach((bar, i) => {
+                        const height = 5 + Math.sin(frame * 0.05 + i * 0.3) * 20 + Math.random() * 10;
+                        bar.style.height = `${Math.max(5, height)}%`;
+                        
+                        // تغيير اللون حسب الارتفاع
+                        if (height > 20) {
+                            bar.style.backgroundColor = '#ff0000';
+                        } else if (height > 15) {
+                            bar.style.backgroundColor = '#ff5500';
+                        } else if (height > 10) {
+                            bar.style.backgroundColor = '#ffaa00';
+                        } else {
+                            bar.style.backgroundColor = '#8B0000';
+                        }
+                    });
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        // بدء التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // منع الإشعارات الخارجية المستمرة
+        setInterval(removeExternalNotifications, 3000);
+    </script>
+</body>
+</html>
